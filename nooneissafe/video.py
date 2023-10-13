@@ -3,7 +3,6 @@ import pathlib
 import time
 
 import cv2 as cv
-import numpy as np
 
 from .utils import (
     color_retengale,
@@ -17,29 +16,33 @@ dt_str_f = '%Y/%m/%d/%H-%M-%S'
 
 
 @contextlib.contextmanager
-def capture_video():
-    cap = cv.VideoCapture(0)
+def capture_video(source):
+    cap = cv.VideoCapture(source)
+    if cap is None or not cap.isOpened():
+        msg = f'Error: unable to open camera {source=!r}'
+        print(msg)
+        raise ValueError(msg)
     cap.read()
-    print('Establise clear frame')
+    print(f'Establise clear frame {source=!r}')
     time.sleep(3)
-    print('Camera rolling')
-    print('Action')
+    print(f'Camera rolling {source=!r}')
+    print(f'Action {source=!r}')
     with contextlib.suppress(KeyboardInterrupt):
         yield cap
-    print('\nCut')
+    print(f'\nCut {source=!r}')
     cap.release()
     cv.destroyAllWindows()
 
 
 @contextlib.contextmanager
-def open_video_file(file_name):
+def open_video_file(file_path):
     fourcc = cv.VideoWriter_fourcc(*'XVID')
-    file_path = pathlib.Path(f'database/{file_name}.avi')
+    file_path = pathlib.Path(f'database/{file_path}.avi')
     file_path.parent.mkdir(parents=True, exist_ok=True)
-    out = cv.VideoWriter(str(file_path), fourcc, 20.0, (640,  480))
-    print('opening video file:', file_name)
+    out = cv.VideoWriter(str(file_path), fourcc, fps=20, frameSize=(640, 480))
+    print('Opening video file:', file_path)
     yield out
-    print('closing video file:', file_name)
+    print('Closing video file:', file_path)
     out.release()
 
 
@@ -52,8 +55,8 @@ def present_frame(frame, show):
     return True
 
 
-def record_loop(show=False, min_rec_time=10, time_between_frames=3):
-    with capture_video() as cap:
+def record_loop(source=0, show=False, min_rec_time=10, time_between_frames=1):
+    with capture_video(source) as cap:
         _, frame = cap.read()
         while cap.isOpened():
             pre_frame, (_, frame) = frame, cap.read()
@@ -65,7 +68,8 @@ def record_loop(show=False, min_rec_time=10, time_between_frames=3):
                 # no movment detected
                 continue
             rec_start_time = now()
-            with open_video_file(now().strftime(dt_str_f)) as file:
+            file_path = f'{now().strftime(dt_str_f)}_{source}'
+            with open_video_file(file_path) as file:
                 extensive_write(file, pre_frame, amount_to_write=25)
                 color_retengale(frame, counters)
                 extensive_write(file, frame)
@@ -75,4 +79,4 @@ def record_loop(show=False, min_rec_time=10, time_between_frames=3):
                     file.write(frame)
                     if filter_conours(pre_frame, frame):
                         rec_start_time = now()
-                        print('new record time:', now().strftime(dt_str_f))
+                        print('New record time:', now().strftime(dt_str_f))
