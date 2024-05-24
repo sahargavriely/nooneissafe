@@ -40,19 +40,15 @@ A python package with the sol purpose of monitoring your connected camera's view
 
     5.2. Write a JSON object to the file you just created with the following:
 
-        5.2.1 `message` - email text content.
-
-        5.2.2 `password` - password which will be used to connect to the SMTP server.
-
-        5.2.3 `recipient_email` - recipient email address.
-
-        5.2.4 `sender_email` - sender email address.
-
-        5.2.5 `smtp_server` - SMTP server name\ip.
-
-        5.2.6 `ssl_port` - SSL port to connect to the SMTP server.
-
-        5.2.7 `username` - username which will be used to connect to the SMTP server.
+        {
+          "message": "email text content",
+          "password": "password which will be used to connect to the SMTP server",
+          "recipient_email": "recipient email address",
+          "sender_email": "sender email address",
+          "smtp_server": "SMTP server name\ ip",
+          "ssl_port": "SSL port to connect to the SMTP server",
+          "username": "username which will be used to connect to the SMTP server"
+        }
 
 4. Let the program run and do its magic:
 
