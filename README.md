@@ -34,11 +34,11 @@ A python package with the sol purpose of monitoring your connected camera's view
 
     1.4. `time_between_sample` - The frequency of sampling in seconds. Default setting is `1`s. The program will sample a frame every `time_between_frame` seconds and compare the two last frames.
 
-5. Configure your SMTP sever configuration:
+2. Configure your SMTP sever configuration:
 
-    5.1. Create a file with the name of `smtp_config.jon` at the root directory.
+    2.1. Create a file with the name of `smtp_config.jon` at the root directory.
 
-    5.2. Write a JSON object to the file you just created with the following:
+    2.2. Write a JSON object to the file you just created with the following:
 
         {
           "message": "email text content",
