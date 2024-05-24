@@ -1,6 +1,6 @@
 # No one is safe
 
-A python package with the sol purpose of monitoring your connected camera's view.
+A python package with the sol purpose of monitoring your connected camera's view and notify upon movement via email.
 
 ## Installtion
 
@@ -17,14 +17,14 @@ A python package with the sol purpose of monitoring your connected camera's view
     ```sh
     $ ./scripts/install.sh
     ...
-    $ source .env/bin/activate
+    $ source venv/bin/activate
     (nooneissafe) $ # rock and roll
     ```
 
 ## Usage
 
 1. Before we go ahead and start the program there are some configuration you can play with.
-   In the `nooneissafe/__main__.py` file, there is a single function call (`record_loop`) which receives 4 arguments:
+   In the `nooneissafe/__main__.py` file, there is a function call (`record_loop`) which receives 4 arguments:
 
     1.1. `source` - The source of the camera - camera index if you would like. If you have only one camera connected, ignore it. Otherwise and if you want the program to use more than one camera, then change `amount_of_cameras` variable in the `__main__` module to the amount you want.
 
@@ -34,11 +34,31 @@ A python package with the sol purpose of monitoring your connected camera's view
 
     1.4. `time_between_sample` - The frequency of sampling in seconds. Default setting is `1`s. The program will sample a frame every `time_between_frame` seconds and compare the two last frames.
 
-2. Let the program run and do its magic:
+5. Configure your SMTP sever configuration:
+
+    5.1. Create a file with the name of `smtp_config.jon` at the root directory.
+
+    5.2. Write a JSON object to the file you just created with the following:
+
+        5.2.1 `message` - email text content.
+
+        5.2.2 `password` - password which will be used to connect to the SMTP server.
+
+        5.2.3 `recipient_email` - recipient email address.
+
+        5.2.4 `sender_email` - sender email address.
+
+        5.2.5 `smtp_server` - SMTP server name\ip.
+
+        5.2.6 `ssl_port` - SSL port to connect to the SMTP server.
+
+        5.2.7 `username` - username which will be used to connect to the SMTP server.
+
+4. Let the program run and do its magic:
 
     ```sh
     (nooneissafe) $ python -m nooneissafe
     ...
     ```
 
-3. Stop the program by pressing `Enter` key or with `ctrl` + `C` and view results. after activation a `database/` directory will be created and in it you will be able to find all the movement detections videos.
+5. Stop the program by pressing `Enter` key or with `ctrl` + `C` and view results. after activation a `database/` directory will be created and in it you will be able to find all the movement detections videos.

@@ -18,13 +18,13 @@ with smtp_config.open('r') as file:
             msg = f'missing {key!r} in smtp config file {smtp_config!r}'
             logger.error(msg)
             raise ValueError(msg)
+message = config['message']
+password = config['password']
+recipient_email = config['recipient_email']
+sender_email = config['sender_email']
 smtp_server = config['smtp_server']
 ssl_port = config['ssl_port']
 username = config['username']
-password = config['password']
-sender_email = config['sender_email']
-recipient_email = config['recipient_email']
-message = config['message']
 
 
 def send_email(img_path: pathlib.Path):
