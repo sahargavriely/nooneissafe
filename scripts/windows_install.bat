@@ -1,3 +1,3 @@
-python -m venv wenv --prompt=nooneissafe
+python -m venv venv --prompt=nooneissafe
 
-wenv\Scripts\pip.exe install -r requirements.txt
+venv\Scripts\pip.exe install -r requirements.txt

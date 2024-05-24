@@ -1,6 +1,10 @@
 import threading
 
+from .logging_setter import setup_logging
 from .video import record_loop
+
+
+setup_logging()
 
 
 amount_of_cameras = 1
