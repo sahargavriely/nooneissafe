@@ -38,7 +38,7 @@ A python package with the sol purpose of monitoring your connected camera's view
 
     2.1. Create a file with the name of `smtp_config.jon` at the root directory.
 
-    2.2. Write a JSON object to the file you just created with the following:
+    2.2. Write a JSON object to the file you have just created with the following:
 
         {
           "message": "email text content",
