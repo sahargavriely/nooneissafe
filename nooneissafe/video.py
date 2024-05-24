@@ -1,6 +1,7 @@
 import contextlib
 import logging
 import pathlib
+import threading
 import time
 
 import cv2 as cv
@@ -66,6 +67,13 @@ def save_frame(file_path, frame):
     return img_path
 
 
+def send_email_wrapper(img_path):
+    try:
+        send_email(img_path)
+    except:
+        logger.exception('failed to send email %s', img_path)
+
+
 def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
     with capture_video(source) as cap:
         _, frame = cap.read()
@@ -82,7 +90,8 @@ def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
             rec_start_time = now()
             logger.info('movement detected')
             img_path = save_frame(file_path, frame)
-            send_email(img_path)
+            threading.Thread(target=send_email_wrapper,
+                             args=(img_path,)).start()
             with open_video_file(file_path) as file:
                 extensive_write(file, pre_frame, amount_to_write=25)
                 color_rectangle(frame, counters)
