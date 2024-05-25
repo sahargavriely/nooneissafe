@@ -16,6 +16,8 @@ from .utils import (
 
 
 dt_str_f = '%Y/%m/%d/%H-%M-%S'
+db_dir = 'database'
+video_prefix = 'avi'
 logger = logging.getLogger(__name__)
 
 
@@ -41,7 +43,7 @@ def capture_video(source):
 @contextlib.contextmanager
 def open_video_file(file_path):
     fourcc = cv.VideoWriter_fourcc(*'XVID')
-    file_path = pathlib.Path(f'database/{file_path}.avi')
+    file_path = pathlib.Path(f'{db_dir}/{file_path}.{video_prefix}')
     file_path.parent.mkdir(parents=True, exist_ok=True)
     out = cv.VideoWriter(str(file_path), fourcc, fps=20, frameSize=(640, 480))
     logger.info('opening video file: %s', file_path)
@@ -67,9 +69,10 @@ def save_frame(file_path, frame):
     return img_path
 
 
-def send_email_wrapper(img_path):
+def send_email_wrapper(img_path, video_size):
     try:
-        send_email(img_path)
+        message = f'Movement detected, capture {video_size} bytes'
+        send_email(img_path, message)
     except:
         logger.exception('failed to send email %s', img_path)
 
@@ -85,13 +88,12 @@ def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
                 break
             counters = filter_contours(pre_frame, frame)
             if not counters:
+                time.sleep(time_between_sample)
                 logger.debug('no movement detected')
                 continue
             rec_start_time = now()
             logger.info('movement detected')
             img_path = save_frame(file_path, frame)
-            threading.Thread(target=send_email_wrapper,
-                             args=(img_path,)).start()
             with open_video_file(file_path) as file:
                 extensive_write(file, pre_frame, amount_to_write=25)
                 color_rectangle(frame, counters)
@@ -104,4 +106,6 @@ def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
                         rec_start_time = now()
                         pretty_time = rec_start_time.strftime(dt_str_f)
                         logger.info('keep record alive: %s', pretty_time)
-            time.sleep(time_between_sample)
+            file_path = pathlib.Path(f'{db_dir}/{file_path}.{video_prefix}')
+            threading.Thread(target=send_email_wrapper,
+                             args=(img_path, file_path.stat().st_size)).start()

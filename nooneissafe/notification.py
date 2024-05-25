@@ -12,13 +12,12 @@ logger = logging.getLogger(__name__)
 smtp_config = pathlib.Path(__file__).parent.parent / 'smtp_config.json'
 with smtp_config.open('r') as file:
     config = json.load(file)
-    for key in ['message', 'password', 'recipient_email', 'sender_email',
-                'smtp_server', 'ssl_port', 'username']:
-        if key not in config:
-            msg = f'missing {key!r} in smtp config file {smtp_config!r}'
-            logger.error(msg)
-            raise ValueError(msg)
-message = config['message']
+for key in ['password', 'recipient_email', 'sender_email', 'smtp_server',
+            'ssl_port', 'username']:
+    if key not in config:
+        msg = f'missing {key=!r} in smtp config file {smtp_config!r}'
+        logger.error(msg)
+        raise ValueError(msg)
 password = config['password']
 recipient_email = config['recipient_email']
 sender_email = config['sender_email']
@@ -27,7 +26,7 @@ ssl_port = config['ssl_port']
 username = config['username']
 
 
-def send_email(img_path: pathlib.Path):
+def send_email(img_path: pathlib.Path, message):
     logger.info('sending email %s to %r, from %r',
                 img_path, recipient_email, sender_email)
     msg = MIMEMultipart()
