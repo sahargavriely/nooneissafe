@@ -10,7 +10,8 @@ def color_rectangle(frame, contours):
             # too small: skip!
             continue
         x, y, w, h = cv.boundingRect(contour)
-        cv.rectangle(img=frame, pt1=(x, y), pt2=(x+w, y+h), color=(0, 255, 0),)
+        cv.rectangle(img=frame, pt1=(x, y), pt2=(x + w, y + h),
+                     color=(0, 255, 0))
 
 
 def extensive_write(file, frame, amount_to_write=100):
