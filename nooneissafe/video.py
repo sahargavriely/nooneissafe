@@ -18,12 +18,20 @@ from .utils import (
 dt_str_f = '%Y/%m/%d/%H-%M-%S'
 video_suffix = 'video.avi'
 image_suffix = 'frame.jpg'
+sizes = [(1280, 720), (640, 480)]  # (1920, 1080) is too big
 logger = logging.getLogger(__name__)
 
 
 @contextlib.contextmanager
 def capture_video(source):
     cap = cv.VideoCapture(source)
+    for w, h in sizes:
+        with contextlib.suppress(Exception):
+            cap.set(cv.CAP_PROP_FRAME_HEIGHT, h)
+            cap.set(cv.CAP_PROP_FRAME_WIDTH, w)
+            logger.info('succefully set resolution of source %r to %sX%s',
+                        source, w, h)
+            break
     if cap is None or not cap.isOpened():
         msg = f'failed to open camera source {source}'
         logger.error(msg)
@@ -76,8 +84,8 @@ def send_email_wrapper(base_name):
     try:
         image_path = pathlib.Path(base_name + image_suffix)
         video_path = pathlib.Path(base_name + video_suffix)
-        video_size = video_path.stat().st_size
-        msg = f'Movement detected, capture {base_name} with {video_size} bytes'
+        mb = video_path.stat().st_size / 2**20
+        msg = f'Movement detected, capture {base_name} with {mb:.1f} MB'
         send_email(image_path, video_path, msg)
     except:
         logger.exception('failed to send email %r', base_name)
