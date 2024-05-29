@@ -39,22 +39,33 @@ def send_email(img_path: pathlib.Path, vid_path: pathlib.Path, message):
     text = MIMEText(message, 'plain')
     msg.attach(text)
 
-    if img_path.exists():
+    if not img_path.exists():
+        logger.warning('image file %s does not exists', img_path)
+    elif img_path.stat().st_size > 2**20:
+        warn = f'image file {img_path} size is greater than 1MB, skipping'
+        text = MIMEText(f'\n{warn}', 'plain')
+        msg.attach(text)
+        logger.warning(warn)
+    else:
         with img_path.open('rb') as f:
             image = MIMEImage(f.read(), name=img_path.name)
             msg.attach(image)
-    else:
-        logger.warning('image file %s does not exists', img_path)
 
-    if vid_path.exists():
+    if not vid_path.exists():
+        logger.warning('video file %s does not exists', vid_path)
+    elif vid_path.stat().st_size > 15 * 2**20:
+        warn = f'video file {vid_path} size is greater than 15MB, skipping'
+        text = MIMEText(f'\n{warn}', 'plain')
+        msg.attach(text)
+        logger.warning(warn)
+    else:
         video = MIMEBase('application', 'octet-stream')
         with vid_path.open('rb') as f:
             video.set_payload(f.read())
         encode_base64(video)
-        video.add_header('Content-Disposition', f'attachment; filename="{vid_path.name}"')
+        video.add_header('Content-Disposition',
+                         f'attachment; filename="{vid_path.name}"')
         msg.attach(video)
-    else:
-        logger.warning('video file %s does not exists', vid_path)
 
     with smtplib.SMTP_SSL(smtp_server, ssl_port) as server:
         server.login(username, password)

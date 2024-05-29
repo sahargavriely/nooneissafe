@@ -14,7 +14,7 @@ def color_rectangle(frame, contours):
                      color=(0, 255, 0))
 
 
-def extensive_write(file, frame, amount_to_write=100):
+def extensive_write(file, frame, amount_to_write=15):
     for _ in range(amount_to_write):
         file.write(frame)
 

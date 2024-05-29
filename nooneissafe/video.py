@@ -85,7 +85,7 @@ def send_email_wrapper(base_name):
         image_path = pathlib.Path(base_name + image_suffix)
         video_path = pathlib.Path(base_name + video_suffix)
         mb = video_path.stat().st_size / 2**20
-        msg = f'Movement detected, capture {base_name} with {mb:.1f} MB'
+        msg = f'Movement detected, capture {base_name} with *{mb:.1f} MB*'
         send_email(image_path, video_path, msg)
     except:
         logger.exception('failed to send email %r', base_name)
@@ -94,6 +94,7 @@ def send_email_wrapper(base_name):
 def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
     with capture_video(source) as cap:
         _, frame = cap.read()
+        fphs = int(cap.get(cv.CAP_PROP_FPS)) // 2  # frame per half a second
         while cap.isOpened():
             base_name = f'database/{now().strftime(dt_str_f)}_{source}_'
             pre_frame, (_, frame) = frame, cap.read()
@@ -109,9 +110,9 @@ def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
             logger.info('movement detected')
             save_frame(base_name, frame)
             with open_video_file(cap, base_name) as file:
-                extensive_write(file, pre_frame, amount_to_write=25)
+                extensive_write(file, pre_frame, amount_to_write=fphs)
                 color_rectangle(frame, counters)
-                extensive_write(file, frame)
+                extensive_write(file, frame, amount_to_write=fphs)
                 while (now() - rec_start_time).seconds < min_rec_time:
                     pre_frame, (_, frame) = frame, cap.read()
                     present_frame(frame, show)
