@@ -6,7 +6,7 @@ from logging.handlers import SysLogHandler, RotatingFileHandler
 def setup_logging(log_lvl=logging.INFO, stream_to_screen=True,
                   stream_to_syslog=False):
 
-    logs_dir = pathlib.Path(__file__).parent.parent.parent / 'logs'
+    logs_dir = pathlib.Path(__file__).parent.parent / 'logs'
     logs_dir.mkdir(parents=True, exist_ok=True)
     logs_path = logs_dir / 'nooneissafe.log'
 
@@ -27,8 +27,7 @@ def setup_logging(log_lvl=logging.INFO, stream_to_screen=True,
         syslog_handler.setFormatter(logging.Formatter(format))
         logging.root.addHandler(syslog_handler)
 
-    logger = logging.getLogger('nooneissafe')
     file_handler = RotatingFileHandler(
         str(logs_path), maxBytes=4 * 1024 * 1024, backupCount=4)
     file_handler.setFormatter(logging.Formatter(f'%(asctime)s {format}'))
-    logger.addHandler(file_handler)
+    logging.root.addHandler(file_handler)
