@@ -1,3 +1,5 @@
+from email.encoders import encode_base64
+from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
@@ -26,9 +28,9 @@ ssl_port = config['ssl_port']
 username = config['username']
 
 
-def send_email(img_path: pathlib.Path, message):
-    logger.info('sending email %s to %r, from %r',
-                img_path, recipient_email, sender_email)
+def send_email(img_path: pathlib.Path, vid_path: pathlib.Path, message):
+    logger.info('sending email %r to %r, from %r',
+                message, recipient_email, sender_email)
     msg = MIMEMultipart()
     msg['Subject'] = f'nooneissafe - {img_path}'
     msg['From'] = sender_email
@@ -44,8 +46,18 @@ def send_email(img_path: pathlib.Path, message):
     else:
         logger.warning('image file %s does not exists', img_path)
 
+    if vid_path.exists():
+        video = MIMEBase('application', 'octet-stream')
+        with vid_path.open('rb') as f:
+            video.set_payload(f.read())
+        encode_base64(video)
+        video.add_header('Content-Disposition', f'attachment; filename="{vid_path.name}"')
+        msg.attach(video)
+    else:
+        logger.warning('video file %s does not exists', vid_path)
+
     with smtplib.SMTP_SSL(smtp_server, ssl_port) as server:
         server.login(username, password)
         server.sendmail(sender_email, recipient_email, msg.as_string())
 
-    logger.info('email %s sent successfully', img_path)
+    logger.info('email %r sent successfully', message)

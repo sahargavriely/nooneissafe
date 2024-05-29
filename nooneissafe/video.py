@@ -41,11 +41,15 @@ def capture_video(source):
 
 
 @contextlib.contextmanager
-def open_video_file(base_name):
+def open_video_file(cap, base_name):
     fourcc = cv.VideoWriter_fourcc(*'XVID')
     file_path = pathlib.Path(base_name + video_suffix)
     file_path.parent.mkdir(parents=True, exist_ok=True)
-    out = cv.VideoWriter(str(file_path), fourcc, fps=20, frameSize=(640, 480))
+    cap_fps = int(cap.get(cv.CAP_PROP_FPS))
+    frame_width = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT))
+    frame_size = frame_width, frame_height
+    out = cv.VideoWriter(str(file_path), fourcc, cap_fps, frame_size)
     logger.info('opening video file: %s', file_path)
     yield out
     logger.info('closing video file: %s', file_path)
@@ -66,15 +70,17 @@ def save_frame(base_name, frame):
     image_path.parent.mkdir(parents=True, exist_ok=True)
     logger.info('saving framing frame: %s', image_path)
     cv.imwrite(str(image_path), frame)
-    return image_path
 
 
-def send_email_wrapper(image_path, video_size):
+def send_email_wrapper(base_name):
     try:
-        message = f'Movement detected, capture {video_size} bytes'
-        send_email(image_path, message)
+        image_path = pathlib.Path(base_name + image_suffix)
+        video_path = pathlib.Path(base_name + video_suffix)
+        video_size = video_path.stat().st_size
+        msg = f'Movement detected, capture {base_name} with {video_size} bytes'
+        send_email(image_path, video_path, msg)
     except:
-        logger.exception('failed to send email %s', image_path)
+        logger.exception('failed to send email %r', base_name)
 
 
 def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
@@ -93,8 +99,8 @@ def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
                 continue
             rec_start_time = now()
             logger.info('movement detected')
-            image_path = save_frame(base_name, frame)
-            with open_video_file(base_name) as file:
+            save_frame(base_name, frame)
+            with open_video_file(cap, base_name) as file:
                 extensive_write(file, pre_frame, amount_to_write=25)
                 color_rectangle(frame, counters)
                 extensive_write(file, frame)
@@ -106,6 +112,5 @@ def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
                         rec_start_time = now()
                         pretty_print_time = rec_start_time.strftime(dt_str_f)
                         logger.info('keep record alive: %s', pretty_print_time)
-            video_size = pathlib.Path(base_name + video_suffix).stat().st_size
             threading.Thread(target=send_email_wrapper,
-                             args=(image_path, video_size,)).start()
+                             args=(base_name,)).start()
