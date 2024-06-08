@@ -25,6 +25,7 @@ recipient_email = config['recipient_email']
 sender_email = config['sender_email']
 smtp_server = config['smtp_server']
 ssl_port = config['ssl_port']
+text_suffix = config.get('text_suffix', 'From anonymous with love.')
 username = config['username']
 
 
@@ -37,7 +38,7 @@ def send_email(img_path: pathlib.Path, vid_path: pathlib.Path, message):
     msg['To'] = recipient_email
 
     text = MIMEText(message, 'plain')
-    msg.attach(text)
+    msg.attach(f'{text}\n{text_suffix}')
 
     if not img_path.exists():
         logger.warning('image file %s does not exists', img_path)
