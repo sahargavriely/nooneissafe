@@ -37,8 +37,8 @@ def send_email(img_path: pathlib.Path, vid_path: pathlib.Path, message):
     msg['From'] = sender_email
     msg['To'] = recipient_email
 
-    text = MIMEText(message, 'plain')
-    msg.attach(f'{text}\n{text_suffix}')
+    text = MIMEText(f'{message}\n{text_suffix}', 'plain')
+    msg.attach(text)
 
     if not img_path.exists():
         logger.warning('image file %s does not exists', img_path)
