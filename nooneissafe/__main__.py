@@ -1,3 +1,4 @@
+import logging
 import threading
 
 from .logging_setter import setup_logging
@@ -14,6 +15,7 @@ amount_of_cameras = 1
 threads = list()
 
 setup_logging()
+logger = logging.getLogger(__name__)
 
 for source in range(amount_of_cameras):
     thread = threading.Thread(target=record_loop, args=(source,), daemon=True)
@@ -21,6 +23,9 @@ for source in range(amount_of_cameras):
     thread.start()
 
 input('Press enter to stop\n')
+logger.info('terminating')
 
 for thread in threads:
     thread.join(timeout=3)
+
+logger.info('terminated')
