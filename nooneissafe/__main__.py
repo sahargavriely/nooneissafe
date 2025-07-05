@@ -17,7 +17,7 @@ stop_signal = pathlib.Path('stop')
 if stop_signal.exists():
     stop_signal.unlink()
 
-amount_of_cameras = 1
+amount_of_cameras = 4
 threads = list()
 
 setup_logging()
