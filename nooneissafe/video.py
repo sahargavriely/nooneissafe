@@ -21,7 +21,7 @@ video_suffix = 'video.mp4'
 image_suffix = 'frame.jpg'
 sizes = [(1280, 720), (640, 480)]  # (1920, 1080) is too big
 default_fps = 20.0
-video_codecs = ('mp4v', 'avc1', 'H264')
+video_codecs = ('avc1', 'H264', 'mp4v')
 logger = logging.getLogger(__name__)
 
 
