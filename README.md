@@ -62,9 +62,6 @@ view and notifying upon movement.
           "timeout_sec": 10
         }
 
-    You can also omit `provider`; if `bot_token` and `chat_id` are present, it
-    will auto-detect Telegram mode.
-
     2.4. For free Discord notifications, use:
 
         {
@@ -73,9 +70,6 @@ view and notifying upon movement.
           "username": "NoOneIsSafe",
           "timeout_sec": 10
         }
-
-    If `provider` is omitted and `webhook_url` points to a Discord webhook, it
-    will auto-detect Discord mode.
 
     Telegram and Discord providers upload actual media files when present.
 

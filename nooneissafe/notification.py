@@ -39,15 +39,8 @@ def _validate_keys(config, required_keys, config_path):
 def _load_provider_config():
     if _notification_config_path.exists():
         config = _load_json(_notification_config_path)
-        provider = config.get('provider')
-        if provider is None:
-            if 'bot_token' in config and 'chat_id' in config:
-                provider = TELEGRAM_PROVIDER
-            elif ('webhook_url' in config and
-                  'discord.com/api/webhooks/' in config['webhook_url']):
-                provider = DISCORD_PROVIDER
-            else:
-                provider = EMAIL_PROVIDER
+        _validate_keys(config, ['provider'], _notification_config_path)
+        provider = config['provider']
         return provider, config, _notification_config_path
     msg = f'missing notification config file {_notification_config_path!r}'
     logger.error(msg)
