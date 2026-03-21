@@ -1,35 +1,69 @@
-from email.encoders import encode_base64
-from email.mime.base import MIMEBase
-from email.mime.text import MIMEText
-from email.mime.image import MIMEImage
-from email.mime.multipart import MIMEMultipart
 import json
 import logging
 import pathlib
 import smtplib
+import urllib.request
+from email.encoders import encode_base64
+from email.mime.base import MIMEBase
+from email.mime.image import MIMEImage
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 
 logger = logging.getLogger(__name__)
 
-smtp_config = pathlib.Path(__file__).parent.parent / 'smtp_config.json'
-with smtp_config.open('r') as file:
-    config = json.load(file)
-for key in ['password', 'recipient_email', 'sender_email', 'smtp_server',
-            'ssl_port', 'username']:
-    if key not in config:
-        msg = f'missing {key=!r} in smtp config file {smtp_config!r}'
-        logger.error(msg)
-        raise ValueError(msg)
-password = config['password']
-recipient_email = config['recipient_email']
-sender_email = config['sender_email']
-smtp_server = config['smtp_server']
-ssl_port = config['ssl_port']
-text_suffix = config.get('text_suffix', 'From anonymous with love.')
-username = config['username']
+EMAIL_PROVIDER = 'email'
+WEBHOOK_PROVIDER = 'webhook'
+_repo_root = pathlib.Path(__file__).parent.parent
+_legacy_smtp_config_path = _repo_root / 'smtp_config.json'
+_notification_config_path = _repo_root / 'notification_config.json'
+_required_smtp_keys = ['password', 'recipient_email', 'sender_email',
+                       'smtp_server', 'ssl_port', 'username']
 
 
-def send_email(img_path: pathlib.Path, vid_path: pathlib.Path, message):
+def _load_json(path):
+    with path.open('r') as file:
+        return json.load(file)
+
+
+def _validate_keys(config, required_keys, config_path):
+    for key in required_keys:
+        if key not in config:
+            msg = f'missing {key=!r} in config file {config_path!r}'
+            logger.error(msg)
+            raise ValueError(msg)
+
+
+def _load_provider_config():
+    if _notification_config_path.exists():
+        config = _load_json(_notification_config_path)
+        provider = config.get('provider')
+        if provider is None:
+            if 'webhook_url' in config:
+                provider = WEBHOOK_PROVIDER
+            else:
+                provider = EMAIL_PROVIDER
+        return provider, config, _notification_config_path
+    if _legacy_smtp_config_path.exists():
+        return (EMAIL_PROVIDER, _load_json(_legacy_smtp_config_path),
+                _legacy_smtp_config_path)
+    msg = ('missing notification config file: expected '
+           f'{_notification_config_path!r} or {_legacy_smtp_config_path!r}')
+    logger.error(msg)
+    raise FileNotFoundError(msg)
+
+
+def send_email(img_path: pathlib.Path, vid_path: pathlib.Path, message,
+               smtp_config: dict, config_path: pathlib.Path):
+    _validate_keys(smtp_config, _required_smtp_keys, config_path)
+    password = smtp_config['password']
+    recipient_email = smtp_config['recipient_email']
+    sender_email = smtp_config['sender_email']
+    smtp_server = smtp_config['smtp_server']
+    ssl_port = smtp_config['ssl_port']
+    username = smtp_config['username']
+    text_suffix = smtp_config.get('text_suffix', 'From anonymous with love.')
+
     logger.info('sending email %r to %r, from %r',
                 message, recipient_email, sender_email)
     msg = MIMEMultipart()
@@ -73,3 +107,38 @@ def send_email(img_path: pathlib.Path, vid_path: pathlib.Path, message):
         server.sendmail(sender_email, recipient_email, msg.as_string())
 
     logger.info('email %r sent successfully', message)
+
+
+def _send_webhook(img_path: pathlib.Path, vid_path: pathlib.Path, message,
+                  webhook_config: dict, config_path: pathlib.Path):
+    _validate_keys(webhook_config, ['webhook_url'], config_path)
+    headers = {'Content-Type': 'application/json'}
+    headers.update(webhook_config.get('headers', {}))
+    payload = {
+        'message': message,
+        'image_path': str(img_path),
+        'video_path': str(vid_path),
+    }
+    timeout = webhook_config.get('timeout_sec', 10)
+    request = urllib.request.Request(
+        webhook_config['webhook_url'],
+        data=json.dumps(payload).encode('utf-8'),
+        headers=headers,
+        method='POST',
+    )
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        logger.info('webhook notification delivered with status %s',
+                    response.status)
+
+
+def send_notification(img_path: pathlib.Path, vid_path: pathlib.Path, message):
+    provider, config, config_path = _load_provider_config()
+    if provider == EMAIL_PROVIDER:
+        send_email(img_path, vid_path, message, config, config_path)
+        return
+    if provider == WEBHOOK_PROVIDER:
+        _send_webhook(img_path, vid_path, message, config, config_path)
+        return
+    msg = f'unsupported notification provider {provider!r} in {config_path!r}'
+    logger.error(msg)
+    raise ValueError(msg)
