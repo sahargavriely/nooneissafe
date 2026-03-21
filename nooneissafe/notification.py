@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 EMAIL_PROVIDER = 'email'
 WEBHOOK_PROVIDER = 'webhook'
 TELEGRAM_PROVIDER = 'telegram'
+DISCORD_PROVIDER = 'discord'
 _repo_root = pathlib.Path(__file__).parent.parent
 _legacy_smtp_config_path = _repo_root / 'smtp_config.json'
 _notification_config_path = _repo_root / 'notification_config.json'
@@ -42,7 +43,10 @@ def _load_provider_config():
         provider = config.get('provider')
         if provider is None:
             if 'webhook_url' in config:
-                provider = WEBHOOK_PROVIDER
+                if 'discord.com/api/webhooks/' in config['webhook_url']:
+                    provider = DISCORD_PROVIDER
+                else:
+                    provider = WEBHOOK_PROVIDER
             elif 'bot_token' in config and 'chat_id' in config:
                 provider = TELEGRAM_PROVIDER
             else:
@@ -154,6 +158,30 @@ def _send_telegram(message, telegram_config, config_path):
                     response.status)
 
 
+def _send_discord(img_path, vid_path, message, discord_config, config_path):
+    _validate_keys(discord_config, ['webhook_url'], config_path)
+    timeout = discord_config.get('timeout_sec', 10)
+    content = (
+        f'{message}\n'
+        f'image: `{img_path}`\n'
+        f'video: `{vid_path}`'
+    )
+    payload = {'content': content}
+    if 'username' in discord_config:
+        payload['username'] = discord_config['username']
+    if 'avatar_url' in discord_config:
+        payload['avatar_url'] = discord_config['avatar_url']
+    request = urllib.request.Request(
+        discord_config['webhook_url'],
+        data=json.dumps(payload).encode('utf-8'),
+        headers={'Content-Type': 'application/json'},
+        method='POST',
+    )
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        logger.info('discord notification delivered with status %s',
+                    response.status)
+
+
 def send_notification(img_path: pathlib.Path, vid_path: pathlib.Path, message):
     provider, config, config_path = _load_provider_config()
     if provider == EMAIL_PROVIDER:
@@ -164,6 +192,9 @@ def send_notification(img_path: pathlib.Path, vid_path: pathlib.Path, message):
         return
     if provider == TELEGRAM_PROVIDER:
         _send_telegram(message, config, config_path)
+        return
+    if provider == DISCORD_PROVIDER:
+        _send_discord(img_path, vid_path, message, config, config_path)
         return
     msg = f'unsupported notification provider {provider!r} in {config_path!r}'
     logger.error(msg)

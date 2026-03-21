@@ -83,6 +83,18 @@ view and notifying upon movement.
     You can also omit `provider`; if `bot_token` and `chat_id` are present, it
     will auto-detect Telegram mode.
 
+    2.5. For free Discord notifications, use:
+
+        {
+          "provider": "discord",
+          "webhook_url": "https://discord.com/api/webhooks/<id>/<token>",
+          "username": "NoOneIsSafe",
+          "timeout_sec": 10
+        }
+
+    If `provider` is omitted and `webhook_url` points to a Discord webhook, it
+    will auto-detect Discord mode.
+
 4. Let the program run and do its magic:
 
     ```sh
