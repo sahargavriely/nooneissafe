@@ -1,75 +1,64 @@
-from email.encoders import encode_base64
-from email.mime.base import MIMEBase
-from email.mime.text import MIMEText
-from email.mime.image import MIMEImage
-from email.mime.multipart import MIMEMultipart
 import json
 import logging
 import pathlib
-import smtplib
+
+from .notification_providers.discord import send_discord
+from .notification_providers.email import send_email
+from .notification_providers.telegram import send_telegram
 
 
 logger = logging.getLogger(__name__)
 
-smtp_config = pathlib.Path(__file__).parent.parent / 'smtp_config.json'
-with smtp_config.open('r') as file:
-    config = json.load(file)
-for key in ['password', 'recipient_email', 'sender_email', 'smtp_server',
-            'ssl_port', 'username']:
-    if key not in config:
-        msg = f'missing {key=!r} in smtp config file {smtp_config!r}'
+EMAIL_PROVIDER = 'email'
+TELEGRAM_PROVIDER = 'telegram'
+DISCORD_PROVIDER = 'discord'
+_notification_config_path = (
+    pathlib.Path(__file__).parent.parent / 'notification_config.json'
+)
+_provider_config = None
+
+
+def _load_json(path):
+    with path.open('r') as file:
+        return json.load(file)
+
+
+def _validate_keys(config, required_keys):
+    for key in required_keys:
+        if key not in config:
+            msg = f'missing {key=!r} in config file {_notification_config_path!r}'
+            logger.error(msg)
+            raise ValueError(msg)
+
+
+def _load_provider_config():
+    if not _notification_config_path.exists():
+        msg = f'missing notification config file {_notification_config_path!r}'
         logger.error(msg)
-        raise ValueError(msg)
-password = config['password']
-recipient_email = config['recipient_email']
-sender_email = config['sender_email']
-smtp_server = config['smtp_server']
-ssl_port = config['ssl_port']
-text_suffix = config.get('text_suffix', 'From anonymous with love.')
-username = config['username']
+        raise FileNotFoundError(msg)
+    config = _load_json(_notification_config_path)
+    _validate_keys(config, ['provider'])
+    return config['provider'], config
 
 
-def send_email(img_path: pathlib.Path, vid_path: pathlib.Path, message):
-    logger.info('sending email %r to %r, from %r',
-                message, recipient_email, sender_email)
-    msg = MIMEMultipart()
-    msg['Subject'] = f'nooneissafe - {img_path}'
-    msg['From'] = sender_email
-    msg['To'] = recipient_email
+def _get_provider_config():
+    global _provider_config
+    if _provider_config is None:
+        _provider_config = _load_provider_config()
+    return _provider_config
 
-    text = MIMEText(f'{message}\n{text_suffix}', 'plain')
-    msg.attach(text)
 
-    if not img_path.exists():
-        logger.warning('image file %s does not exists', img_path)
-    elif img_path.stat().st_size > 2**20:
-        warn = f'image file {img_path} size is greater than 1MB, skipping'
-        text = MIMEText(f'\n{warn}', 'plain')
-        msg.attach(text)
-        logger.warning(warn)
-    else:
-        with img_path.open('rb') as f:
-            image = MIMEImage(f.read(), name=img_path.name)
-            msg.attach(image)
-
-    if not vid_path.exists():
-        logger.warning('video file %s does not exists', vid_path)
-    elif vid_path.stat().st_size > 15 * 2**20:
-        warn = f'video file {vid_path} size is greater than 15MB, skipping'
-        text = MIMEText(f'\n{warn}', 'plain')
-        msg.attach(text)
-        logger.warning(warn)
-    else:
-        video = MIMEBase('application', 'octet-stream')
-        with vid_path.open('rb') as f:
-            video.set_payload(f.read())
-        encode_base64(video)
-        video.add_header('Content-Disposition',
-                         f'attachment; filename="{vid_path.name}"')
-        msg.attach(video)
-
-    with smtplib.SMTP_SSL(smtp_server, ssl_port) as server:
-        server.login(username, password)
-        server.sendmail(sender_email, recipient_email, msg.as_string())
-
-    logger.info('email %r sent successfully', message)
+def send_notification(img_path: pathlib.Path, vid_path: pathlib.Path, message):
+    provider, config = _get_provider_config()
+    if provider == EMAIL_PROVIDER:
+        send_email(img_path, vid_path, message, config)
+        return
+    if provider == TELEGRAM_PROVIDER:
+        send_telegram(img_path, vid_path, message, config)
+        return
+    if provider == DISCORD_PROVIDER:
+        send_discord(img_path, vid_path, message, config)
+        return
+    msg = f'unsupported notification provider {provider!r}'
+    logger.error(msg)
+    raise ValueError(msg)

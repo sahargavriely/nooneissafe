@@ -6,7 +6,7 @@ import time
 
 import cv2 as cv
 
-from .notification import send_email
+from .notification import send_notification
 from .utils import (
     color_rectangle,
     extensive_write,
@@ -80,15 +80,15 @@ def save_frame(base_name, frame):
     cv.imwrite(str(image_path), frame)
 
 
-def send_email_wrapper(base_name):
+def send_notification_wrapper(base_name):
     try:
         image_path = pathlib.Path(base_name + image_suffix)
         video_path = pathlib.Path(base_name + video_suffix)
         mb = video_path.stat().st_size / 2**20
         msg = f'Movement detected, capture {base_name} with *{mb:.1f} MB*'
-        send_email(image_path, video_path, msg)
+        send_notification(image_path, video_path, msg)
     except:
-        logger.exception('failed to send email %r', base_name)
+        logger.exception('failed to send notification %r', base_name)
 
 
 def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
@@ -121,5 +121,5 @@ def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
                         rec_start_time = now()
                         pretty_print_time = rec_start_time.strftime(dt_str_f)
                         logger.info('keep record alive: %s', pretty_print_time)
-            threading.Thread(target=send_email_wrapper,
+            threading.Thread(target=send_notification_wrapper,
                              args=(base_name,)).start()

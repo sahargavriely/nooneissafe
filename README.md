@@ -1,6 +1,7 @@
 # No one is safe
 
-A python package with the sol purpose of monitoring your connected camera's view and notify upon movement via email.
+A python package with the sole purpose of monitoring your connected camera's
+view and notifying upon movement.
 
 ## Installtion
 
@@ -34,21 +35,45 @@ A python package with the sol purpose of monitoring your connected camera's view
 
     1.4. `time_between_sample` - The frequency of sampling in seconds. Default setting is `1`s. The program will sample a frame every `time_between_frame` seconds and compare the two last frames.
 
-2. Configure your SMTP sever configuration:
+2. Configure your notification provider:
 
-    2.1. Create a file with the name of `smtp_config.jon` at the root directory.
+    2.1. Create `notification_config.json` at the root directory.
 
-    2.2. Write a JSON object to the file you have just created with the following:
+    2.2. For SMTP email notifications, use:
 
         {
-          "message": "email text content",
-          "password": "password which will be used to connect to the SMTP server",
+          "provider": "email",
+          "password": "password used to connect to SMTP",
           "recipient_email": "recipient email address",
           "sender_email": "sender email address",
-          "smtp_server": "SMTP server name\ ip",
-          "ssl_port": "SSL port to connect to the SMTP server",
-          "username": "username which will be used to connect to the SMTP server"
+          "smtp_server": "SMTP server host",
+          "ssl_port": 465,
+          "username": "SMTP username",
+          "text_suffix": "From anonymous with love."
         }
+
+    2.3. For free Telegram notifications, use:
+
+        {
+          "provider": "telegram",
+          "bot_token": "<telegram bot token from @BotFather>",
+          "chat_id": "<your chat id>",
+          "parse_mode": "Markdown",
+          "text_suffix": "From anonymous with love.",
+          "timeout_sec": 10
+        }
+
+    2.4. For free Discord notifications, use:
+
+        {
+          "provider": "discord",
+          "webhook_url": "https://discord.com/api/webhooks/<id>/<token>",
+          "username": "NoOneIsSafe",
+          "text_suffix": "From anonymous with love.",
+          "timeout_sec": 10
+        }
+
+    Telegram and Discord providers upload actual media files when present.
 
 4. Let the program run and do its magic:
 
