@@ -34,17 +34,24 @@ def send_discord(img_path, vid_path, message, discord_config):
     for file_path in file_paths:
         if file_path.stat().st_size > DISCORD_WEBHOOK_MAX_FILE_SIZE:
             logger.warning(
-                'discord file %s is bigger than webhook limit (8 MiB), skipping',
+                'discord file %s is bigger than webhook limit '
+                '(8 MiB), skipping',
                 file_path,
             )
             continue
         allowed_paths.append(file_path)
     if not allowed_paths:
-        msg = f'no files under Discord webhook size limit for {img_path}, {vid_path}'
+        msg = (
+            'no files under Discord webhook size limit for '
+            f'{img_path}, {vid_path}'
+        )
         logger.error(msg)
         raise ValueError(msg)
 
-    text_suffix = discord_config.get('text_suffix', 'From anonymous with love.')
+    text_suffix = discord_config.get(
+        'text_suffix',
+        'From anonymous with love.',
+    )
     base_payload = {'content': f'{message}\n{text_suffix}'}
     if 'username' in discord_config:
         base_payload['username'] = discord_config['username']
