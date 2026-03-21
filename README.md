@@ -33,7 +33,17 @@ view and notifying upon movement.
 
     1.3. `min_rec_time` - The minimum recording time once a movement was discoverd, in seconds. Default setting is `10`s.
 
-    1.4. `time_between_sample` - The frequency of sampling in seconds. Default setting is `1`s. The program will sample a frame every `time_between_frame` seconds and compare the two last frames.
+    1.4. `time_between_sample` - The frequency of sampling in seconds. Default setting is `1`s. The program uses a background model and samples a frame every `time_between_sample` seconds when idle.
+
+The movement detector uses OpenCV background subtraction (MOG2) with:
+
+- noise cleanup via morphological open/close;
+- contour area filtering;
+- changed-pixel ratio filtering;
+- consecutive positive-frame confirmation before triggering.
+
+This is more robust than raw two-frame differencing and reduces false positives
+from sensor noise and minor light flicker.
 
 2. Configure your notification provider:
 

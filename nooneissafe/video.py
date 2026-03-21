@@ -11,9 +11,9 @@ import cv2 as cv
 
 from .notification import send_notification
 from .utils import (
+    MotionDetector,
     color_rectangle,
     extensive_write,
-    filter_contours,
     now,
 )
 
@@ -187,10 +187,16 @@ def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
             msg = f'failed to read initial frame from source {source}'
             logger.error(msg)
             raise RuntimeError(msg)
+        warmup_frames = max(int(round(3 / max(time_between_sample, 0.1))), 1)
+        motion_detector = MotionDetector(
+            warmup_frames=warmup_frames,
+        )
+        motion_detector.detect(frame)
         capture_fps = cap.get(cv.CAP_PROP_FPS)
         if not math.isfinite(capture_fps) or capture_fps <= 0:
             capture_fps = default_fps
         fphs = max(int(capture_fps) // 2, 1)  # frames per half a second
+        pre_frame = frame
         while cap.isOpened():
             base_name = f'database/{now().strftime(dt_str_f)}_{source}_'
             pre_frame, (captured, frame) = frame, cap.read()
@@ -203,18 +209,23 @@ def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
             if not present_frame(frame, show):
                 logger.info('preset window closed, ending loop')
                 break
-            counters = filter_contours(pre_frame, frame)
-            if not counters:
+            detection = motion_detector.detect(frame)
+            if not detection.has_motion:
                 time.sleep(time_between_sample)
                 logger.debug('no movement detected')
                 continue
             rec_start_time = now()
-            logger.info('movement detected')
+            logger.info(
+                'movement detected: ratio=%0.4f changed_pixels=%s',
+                detection.motion_ratio,
+                detection.motion_pixels,
+            )
             save_frame(base_name, frame)
             with open_video_file(cap, base_name, frame) as file:
                 extensive_write(file, pre_frame, amount_to_write=fphs)
-                color_rectangle(frame, counters)
-                extensive_write(file, frame, amount_to_write=fphs)
+                marked_frame = frame.copy()
+                color_rectangle(marked_frame, detection.contours)
+                extensive_write(file, marked_frame, amount_to_write=fphs)
                 while (now() - rec_start_time).seconds < min_rec_time:
                     pre_frame, (captured, frame) = frame, cap.read()
                     if not captured:
@@ -223,10 +234,16 @@ def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
                                        source)
                         break
                     present_frame(frame, show)
-                    file.write(frame)
-                    if filter_contours(pre_frame, frame):
+                    keep_alive_detection = motion_detector.detect(frame)
+                    if keep_alive_detection.has_motion:
                         rec_start_time = now()
                         pretty_print_time = rec_start_time.strftime(dt_str_f)
                         logger.info('keep record alive: %s', pretty_print_time)
+                        marked_frame = frame.copy()
+                        color_rectangle(marked_frame,
+                                        keep_alive_detection.contours)
+                        file.write(marked_frame)
+                        continue
+                    file.write(frame)
             threading.Thread(target=send_notification_wrapper,
                              args=(base_name,)).start()
