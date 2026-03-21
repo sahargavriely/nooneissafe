@@ -135,8 +135,10 @@ def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
             base_name = f'database/{now().strftime(dt_str_f)}_{source}_'
             pre_frame, (captured, frame) = frame, cap.read()
             if not captured:
-                logger.warning('failed to read frame from source %r, ending loop',
-                               source)
+                logger.warning(
+                    'failed to read frame from source %r, ending loop',
+                    source,
+                )
                 break
             if not present_frame(frame, show):
                 logger.info('preset window closed, ending loop')
