@@ -2,6 +2,8 @@ import contextlib
 import logging
 import math
 import pathlib
+import subprocess
+import tempfile
 import threading
 import time
 
@@ -22,6 +24,7 @@ image_suffix = 'frame.jpg'
 sizes = [(1280, 720), (640, 480)]  # (1920, 1080) is too big
 default_fps = 20.0
 video_codecs = ('avc1', 'H264', 'mp4v')
+video_normalize_timeout_sec = 180
 logger = logging.getLogger(__name__)
 
 
@@ -92,6 +95,62 @@ def open_video_file(cap, base_name, frame):
     finally:
         logger.info('closing video file: %s', file_path)
         out.release()
+        normalize_video_for_distribution(file_path)
+
+
+def normalize_video_for_distribution(video_path):
+    with tempfile.NamedTemporaryFile(
+        suffix='.mp4',
+        delete=False,
+        dir=str(video_path.parent),
+    ) as tmp:
+        normalized_path = pathlib.Path(tmp.name)
+    ffmpeg_cmd = [
+        'ffmpeg',
+        '-y',
+        '-i',
+        str(video_path),
+        '-an',
+        '-c:v',
+        'libx264',
+        '-profile:v',
+        'baseline',
+        '-level',
+        '3.1',
+        '-pix_fmt',
+        'yuv420p',
+        '-preset',
+        'veryfast',
+        '-crf',
+        '27',
+        '-movflags',
+        '+faststart',
+        '-vf',
+        'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+        str(normalized_path),
+    ]
+    try:
+        subprocess.run(
+            ffmpeg_cmd,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=video_normalize_timeout_sec,
+        )
+    except FileNotFoundError:
+        logger.warning('ffmpeg is not available, keeping original video %s',
+                       video_path)
+        with contextlib.suppress(FileNotFoundError):
+            normalized_path.unlink()
+        return
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+        logger.warning('failed to normalize output video %s: %s',
+                       video_path, error)
+        with contextlib.suppress(FileNotFoundError):
+            normalized_path.unlink()
+        return
+    normalized_path.replace(video_path)
+    logger.info('normalized video to H.264 MP4: %s', video_path)
 
 
 def present_frame(frame, show):
