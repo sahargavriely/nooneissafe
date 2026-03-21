@@ -6,6 +6,7 @@ from ..utils import post_multipart
 
 logger = logging.getLogger(__name__)
 DISCORD_WEBHOOK_MAX_FILE_SIZE = 8 * 2**20  # 8 MiB per attachment
+DISCORD_USER_AGENT = 'curl/8.6.0'
 
 
 def send_discord(img_path, vid_path, message, discord_config):
@@ -15,7 +16,6 @@ def send_discord(img_path, vid_path, message, discord_config):
         raise ValueError(msg)
 
     timeout = discord_config.get('timeout_sec', 10)
-    user_agent = discord_config.get('user_agent', 'curl/8.6.0')
     file_paths = []
     if img_path.exists():
         file_paths.append(img_path)
@@ -60,7 +60,7 @@ def send_discord(img_path, vid_path, message, discord_config):
             [('files[0]', file_path)],
             timeout,
             headers={
-                'User-Agent': user_agent,
+                'User-Agent': DISCORD_USER_AGENT,
                 'Accept': 'application/json',
             },
         )
