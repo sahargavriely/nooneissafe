@@ -17,10 +17,11 @@ from .utils import (
 
 
 dt_str_f = '%Y/%m/%d/%H-%M-%S'
-video_suffix = 'video.avi'
+video_suffix = 'video.mp4'
 image_suffix = 'frame.jpg'
 sizes = [(1280, 720), (640, 480)]  # (1920, 1080) is too big
 default_fps = 20.0
+video_codecs = ('mp4v', 'avc1', 'H264')
 logger = logging.getLogger(__name__)
 
 
@@ -71,19 +72,19 @@ def open_video_file(cap, base_name, frame):
                        'falling back to current frame shape %sx%s',
                        frame_width, frame_height)
     frame_size = frame_width, frame_height
-    fourcc = cv.VideoWriter_fourcc(*'XVID')
-    out = cv.VideoWriter(str(file_path), fourcc, cap_fps, frame_size)
-    if not out.isOpened():
-        logger.warning('failed to create XVID writer for %s, trying MJPG',
-                       file_path)
-        out.release()
-        fallback_fourcc = cv.VideoWriter_fourcc(*'MJPG')
-        out = cv.VideoWriter(str(file_path), fallback_fourcc, cap_fps,
-                             frame_size)
-    if not out.isOpened():
+    out = None
+    for codec in video_codecs:
+        fourcc = cv.VideoWriter_fourcc(*codec)
+        candidate = cv.VideoWriter(str(file_path), fourcc, cap_fps, frame_size)
+        if candidate.isOpened():
+            logger.info('using %s codec for video output %s', codec, file_path)
+            out = candidate
+            break
+        logger.warning('failed to create %s writer for %s', codec, file_path)
+        candidate.release()
+    if out is None:
         msg = f'failed to open video writer for {file_path}'
         logger.error(msg)
-        out.release()
         raise RuntimeError(msg)
     logger.info('opening video file: %s', file_path)
     try:
