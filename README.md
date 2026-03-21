@@ -1,6 +1,7 @@
 # No one is safe
 
-A python package with the sol purpose of monitoring your connected camera's view and notify upon movement via email.
+A python package with the sole purpose of monitoring your connected camera's
+view and notifying upon movement.
 
 ## Installtion
 
@@ -68,6 +69,19 @@ A python package with the sol purpose of monitoring your connected camera's view
     - `message` (text notification)
     - `image_path` (saved frame path)
     - `video_path` (saved clip path)
+
+    2.4. For free Telegram notifications, use:
+
+        {
+          "provider": "telegram",
+          "bot_token": "<telegram bot token from @BotFather>",
+          "chat_id": "<your chat id>",
+          "parse_mode": "Markdown",
+          "timeout_sec": 10
+        }
+
+    You can also omit `provider`; if `bot_token` and `chat_id` are present, it
+    will auto-detect Telegram mode.
 
 4. Let the program run and do its magic:
 

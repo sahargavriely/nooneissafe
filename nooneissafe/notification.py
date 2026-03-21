@@ -2,6 +2,7 @@ import json
 import logging
 import pathlib
 import smtplib
+import urllib.parse
 import urllib.request
 from email.encoders import encode_base64
 from email.mime.base import MIMEBase
@@ -14,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 EMAIL_PROVIDER = 'email'
 WEBHOOK_PROVIDER = 'webhook'
+TELEGRAM_PROVIDER = 'telegram'
 _repo_root = pathlib.Path(__file__).parent.parent
 _legacy_smtp_config_path = _repo_root / 'smtp_config.json'
 _notification_config_path = _repo_root / 'notification_config.json'
@@ -41,6 +43,8 @@ def _load_provider_config():
         if provider is None:
             if 'webhook_url' in config:
                 provider = WEBHOOK_PROVIDER
+            elif 'bot_token' in config and 'chat_id' in config:
+                provider = TELEGRAM_PROVIDER
             else:
                 provider = EMAIL_PROVIDER
         return provider, config, _notification_config_path
@@ -131,6 +135,25 @@ def _send_webhook(img_path: pathlib.Path, vid_path: pathlib.Path, message,
                     response.status)
 
 
+def _send_telegram(message, telegram_config, config_path):
+    _validate_keys(telegram_config, ['bot_token', 'chat_id'], config_path)
+    timeout = telegram_config.get('timeout_sec', 10)
+    endpoint = (
+        f"https://api.telegram.org/bot{telegram_config['bot_token']}/sendMessage"
+    )
+    payload = {
+        'chat_id': telegram_config['chat_id'],
+        'text': message,
+    }
+    if 'parse_mode' in telegram_config:
+        payload['parse_mode'] = telegram_config['parse_mode']
+    data = urllib.parse.urlencode(payload).encode('utf-8')
+    request = urllib.request.Request(endpoint, data=data, method='POST')
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        logger.info('telegram notification delivered with status %s',
+                    response.status)
+
+
 def send_notification(img_path: pathlib.Path, vid_path: pathlib.Path, message):
     provider, config, config_path = _load_provider_config()
     if provider == EMAIL_PROVIDER:
@@ -138,6 +161,9 @@ def send_notification(img_path: pathlib.Path, vid_path: pathlib.Path, message):
         return
     if provider == WEBHOOK_PROVIDER:
         _send_webhook(img_path, vid_path, message, config, config_path)
+        return
+    if provider == TELEGRAM_PROVIDER:
+        _send_telegram(message, config, config_path)
         return
     msg = f'unsupported notification provider {provider!r} in {config_path!r}'
     logger.error(msg)
