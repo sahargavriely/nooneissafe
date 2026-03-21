@@ -25,7 +25,8 @@ def send_telegram(img_path, vid_path, message, telegram_config):
             raise ValueError(msg)
 
     sent_any_file = False
-    caption = message
+    text_suffix = telegram_config.get('text_suffix', 'From anonymous with love.')
+    caption = f'{message}\n{text_suffix}'
     if img_path.exists():
         _send_telegram_file(telegram_config, 'sendPhoto', 'photo', img_path,
                             caption)

@@ -59,6 +59,7 @@ view and notifying upon movement.
           "bot_token": "<telegram bot token from @BotFather>",
           "chat_id": "<your chat id>",
           "parse_mode": "Markdown",
+          "text_suffix": "From anonymous with love.",
           "timeout_sec": 10
         }
 
@@ -68,6 +69,7 @@ view and notifying upon movement.
           "provider": "discord",
           "webhook_url": "https://discord.com/api/webhooks/<id>/<token>",
           "username": "NoOneIsSafe",
+          "text_suffix": "From anonymous with love.",
           "timeout_sec": 10
         }
 

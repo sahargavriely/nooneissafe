@@ -29,7 +29,8 @@ def send_discord(img_path, vid_path, message, discord_config):
         raise FileNotFoundError(msg)
     files = [(f'files[{i}]', path) for i, path in enumerate(file_paths)]
 
-    payload = {'content': message}
+    text_suffix = discord_config.get('text_suffix', 'From anonymous with love.')
+    payload = {'content': f'{message}\n{text_suffix}'}
     if 'username' in discord_config:
         payload['username'] = discord_config['username']
     if 'avatar_url' in discord_config:
