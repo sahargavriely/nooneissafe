@@ -70,6 +70,7 @@ view and notifying upon movement.
           "webhook_url": "https://discord.com/api/webhooks/<id>/<token>",
           "username": "NoOneIsSafe",
           "text_suffix": "From anonymous with love.",
+          "max_file_mb": 8,
           "timeout_sec": 10
         }
 

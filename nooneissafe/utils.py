@@ -1,5 +1,6 @@
 import datetime
 import mimetypes
+import urllib.error
 import urllib.request
 import uuid
 
@@ -87,5 +88,11 @@ def post_multipart(url, fields, files, timeout):
         headers={'Content-Type': content_type},
         method='POST',
     )
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        return response.status
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return response.status
+    except urllib.error.HTTPError as error:
+        body = error.read().decode('utf-8', errors='replace')
+        raise RuntimeError(
+            f'HTTP {error.code} while posting multipart to {url}: {body}'
+        ) from error
