@@ -95,7 +95,6 @@ def open_video_file(cap, base_name, frame):
     finally:
         logger.info('closing video file: %s', file_path)
         out.release()
-        normalize_video_for_distribution(file_path)
 
 
 def normalize_video_for_distribution(video_path):
@@ -173,6 +172,7 @@ def send_notification_wrapper(base_name):
     try:
         image_path = pathlib.Path(base_name + image_suffix)
         video_path = pathlib.Path(base_name + video_suffix)
+        normalize_video_for_distribution(video_path)
         mb = video_path.stat().st_size / 2**20
         msg = f'Movement detected, capture {base_name} with *{mb:.1f} MB*'
         send_notification(image_path, video_path, msg)
