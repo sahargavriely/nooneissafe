@@ -1,6 +1,6 @@
 import logging
 
-from .multipart import post_multipart
+from ..utils import post_multipart
 
 
 logger = logging.getLogger(__name__)
