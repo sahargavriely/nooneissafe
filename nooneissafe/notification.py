@@ -18,7 +18,6 @@ WEBHOOK_PROVIDER = 'webhook'
 TELEGRAM_PROVIDER = 'telegram'
 DISCORD_PROVIDER = 'discord'
 _repo_root = pathlib.Path(__file__).parent.parent
-_legacy_smtp_config_path = _repo_root / 'smtp_config.json'
 _notification_config_path = _repo_root / 'notification_config.json'
 _required_smtp_keys = ['password', 'recipient_email', 'sender_email',
                        'smtp_server', 'ssl_port', 'username']
@@ -52,11 +51,7 @@ def _load_provider_config():
             else:
                 provider = EMAIL_PROVIDER
         return provider, config, _notification_config_path
-    if _legacy_smtp_config_path.exists():
-        return (EMAIL_PROVIDER, _load_json(_legacy_smtp_config_path),
-                _legacy_smtp_config_path)
-    msg = ('missing notification config file: expected '
-           f'{_notification_config_path!r} or {_legacy_smtp_config_path!r}')
+    msg = f'missing notification config file {_notification_config_path!r}'
     logger.error(msg)
     raise FileNotFoundError(msg)
 

@@ -37,9 +37,7 @@ view and notifying upon movement.
 
 2. Configure your notification provider:
 
-    2.1. Create one of these files at the root directory:
-    - `notification_config.json` (recommended, supports multiple providers)
-    - `smtp_config.json` (legacy, email-only compatibility mode)
+    2.1. Create `notification_config.json` at the root directory.
 
     2.2. For SMTP email notifications, use:
 
