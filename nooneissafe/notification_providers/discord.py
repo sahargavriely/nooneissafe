@@ -27,7 +27,7 @@ def send_discord(img_path, vid_path, message, discord_config):
         msg = f'no files to send via discord for {img_path} and {vid_path}'
         logger.error(msg)
         raise FileNotFoundError(msg)
-    files = [(f'files[{i}]', path) for i, path in enumerate(file_paths)]
+    files = [(f'file{i + 1}', path) for i, path in enumerate(file_paths)]
 
     text_suffix = discord_config.get('text_suffix', 'From anonymous with love.')
     payload = {'content': f'{message}\n{text_suffix}'}
