@@ -5,6 +5,7 @@ from ..utils import post_multipart
 
 
 logger = logging.getLogger(__name__)
+DISCORD_WEBHOOK_MAX_FILE_SIZE = 8 * 2**20  # 8 MiB per attachment
 
 
 def send_discord(img_path, vid_path, message, discord_config):
@@ -28,6 +29,20 @@ def send_discord(img_path, vid_path, message, discord_config):
         msg = f'no files to send via discord for {img_path} and {vid_path}'
         logger.error(msg)
         raise FileNotFoundError(msg)
+    allowed_paths = []
+    for file_path in file_paths:
+        if file_path.stat().st_size > DISCORD_WEBHOOK_MAX_FILE_SIZE:
+            logger.warning(
+                'discord file %s is bigger than webhook limit (8 MiB), skipping',
+                file_path,
+            )
+            continue
+        allowed_paths.append(file_path)
+    if not allowed_paths:
+        msg = f'no files under Discord webhook size limit for {img_path}, {vid_path}'
+        logger.error(msg)
+        raise ValueError(msg)
+
     text_suffix = discord_config.get('text_suffix', 'From anonymous with love.')
     base_payload = {'content': f'{message}\n{text_suffix}'}
     if 'username' in discord_config:
@@ -35,7 +50,7 @@ def send_discord(img_path, vid_path, message, discord_config):
     if 'avatar_url' in discord_config:
         base_payload['avatar_url'] = discord_config['avatar_url']
 
-    for index, file_path in enumerate(file_paths):
+    for index, file_path in enumerate(allowed_paths):
         payload = dict(base_payload)
         if index > 0:
             payload['content'] = None
