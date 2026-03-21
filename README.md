@@ -73,6 +73,9 @@ view and notifying upon movement.
           "timeout_sec": 10
         }
 
+    Discord webhook uploads are limited to 8 MiB per file in this app.
+    Files above that limit are skipped.
+
     Telegram and Discord providers upload actual media files when present.
 
 4. Let the program run and do its magic:
