@@ -80,12 +80,15 @@ def _encode_multipart_form_data(fields, files):
     return bytes(body), content_type
 
 
-def post_multipart(url, fields, files, timeout):
+def post_multipart(url, fields, files, timeout, headers=None):
     body, content_type = _encode_multipart_form_data(fields, files)
+    request_headers = {'Content-Type': content_type}
+    if headers:
+        request_headers.update(headers)
     request = urllib.request.Request(
         url,
         data=body,
-        headers={'Content-Type': content_type},
+        headers=request_headers,
         method='POST',
     )
     try:

@@ -71,6 +71,7 @@ view and notifying upon movement.
           "username": "NoOneIsSafe",
           "text_suffix": "From anonymous with love.",
           "max_file_mb": 8,
+          "user_agent": "curl/8.6.0",
           "timeout_sec": 10
         }
 

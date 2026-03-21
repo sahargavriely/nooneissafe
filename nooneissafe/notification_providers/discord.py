@@ -15,6 +15,7 @@ def send_discord(img_path, vid_path, message, discord_config):
         raise ValueError(msg)
 
     timeout = discord_config.get('timeout_sec', 10)
+    user_agent = discord_config.get('user_agent', 'curl/8.6.0')
     max_file_mb = discord_config.get('max_file_mb', DEFAULT_MAX_FILE_MB)
     file_paths = []
     if img_path.exists():
@@ -62,6 +63,10 @@ def send_discord(img_path, vid_path, message, discord_config):
             {'payload_json': json.dumps(payload)},
             [('files[0]', file_path)],
             timeout,
+            headers={
+                'User-Agent': user_agent,
+                'Accept': 'application/json',
+            },
         )
         logger.info('discord file %s delivered with status %s',
                     file_path, status)
