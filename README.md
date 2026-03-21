@@ -52,23 +52,7 @@ view and notifying upon movement.
           "text_suffix": "From anonymous with love."
         }
 
-    2.3. For webhook notifications (no email server needed), use:
-
-        {
-          "provider": "webhook",
-          "webhook_url": "https://example.com/notify",
-          "headers": {
-            "Authorization": "Bearer <token>"
-          },
-          "timeout_sec": 10
-        }
-
-    The webhook payload contains:
-    - `message` (text notification)
-    - `image_path` (saved frame path)
-    - `video_path` (saved clip path)
-
-    2.4. For free Telegram notifications, use:
+    2.3. For free Telegram notifications, use:
 
         {
           "provider": "telegram",
@@ -81,7 +65,7 @@ view and notifying upon movement.
     You can also omit `provider`; if `bot_token` and `chat_id` are present, it
     will auto-detect Telegram mode.
 
-    2.5. For free Discord notifications, use:
+    2.4. For free Discord notifications, use:
 
         {
           "provider": "discord",
@@ -92,6 +76,8 @@ view and notifying upon movement.
 
     If `provider` is omitted and `webhook_url` points to a Discord webhook, it
     will auto-detect Discord mode.
+
+    Telegram and Discord providers upload actual media files when present.
 
 4. Let the program run and do its magic:
 
