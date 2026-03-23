@@ -4,3 +4,4 @@ database/
 logs/
 venv/
 smtp_config.json
+notification_config.json
