@@ -36,10 +36,10 @@ class MotionDetector:
     def __init__(
         self,
         history=200,
-        var_threshold=32,
-        min_contour_area=900,
-        min_motion_ratio=0.003,
-        required_motion_frames=2,
+        var_threshold=40,
+        min_contour_area=1500,
+        min_motion_ratio=0.005,
+        required_motion_frames=3,
         warmup_frames=3,
     ):
         self.min_contour_area = min_contour_area
