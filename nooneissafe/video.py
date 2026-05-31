@@ -202,10 +202,10 @@ def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
             pre_frame, (captured, frame) = frame, cap.read()
             if not captured:
                 logger.warning(
-                    'failed to read frame from source %r, ending loop',
+                    'failed to read frame from source %r, retrying',
                     source,
                 )
-                break
+                continue
             if not present_frame(frame, show):
                 logger.info('preset window closed, ending loop')
                 break
@@ -229,10 +229,12 @@ def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
                 while (now() - rec_start_time).seconds < min_rec_time:
                     pre_frame, (captured, frame) = frame, cap.read()
                     if not captured:
-                        logger.warning('failed to read frame while recording '
-                                       'source %r, ending recording loop',
-                                       source)
-                        break
+                        logger.warning(
+                            'failed to read frame while recording source %r, '
+                            'retrying',
+                            source,
+                        )
+                        continue
                     present_frame(frame, show)
                     keep_alive_detection = motion_detector.detect(frame)
                     if keep_alive_detection.has_motion:
