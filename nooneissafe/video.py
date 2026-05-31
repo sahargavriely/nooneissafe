@@ -25,23 +25,7 @@ sizes = [(1280, 720), (640, 480)]  # (1920, 1080) is too big
 default_fps = 20.0
 video_codecs = ('avc1', 'H264', 'mp4v')
 video_normalize_timeout_sec = 180
-frame_read_retry_delay_sec = 1.0
-STOP_SIGNAL = pathlib.Path('stop')
 logger = logging.getLogger(__name__)
-
-
-def ensure_capture_open(cap, source):
-    if cap.isOpened():
-        return
-    logger.warning('capture source %r is not open, reopening', source)
-    cap.open(source)
-    for w, h in sizes:
-        with contextlib.suppress(Exception):
-            cap.set(cv.CAP_PROP_FRAME_HEIGHT, h)
-            cap.set(cv.CAP_PROP_FRAME_WIDTH, w)
-            logger.info('succefully set resolution of source %r to %sX%s',
-                        source, w, h)
-            break
 
 
 @contextlib.contextmanager
@@ -199,16 +183,10 @@ def send_notification_wrapper(base_name):
 def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
     with capture_video(source) as cap:
         captured, frame = cap.read()
-        while not captured and not STOP_SIGNAL.exists():
-            logger.warning(
-                'failed to read initial frame from source %r, retrying',
-                source,
-            )
-            ensure_capture_open(cap, source)
-            time.sleep(frame_read_retry_delay_sec)
-            captured, frame = cap.read()
         if not captured:
-            return
+            msg = f'failed to read initial frame from source {source}'
+            logger.error(msg)
+            raise RuntimeError(msg)
         warmup_frames = max(int(round(3 / max(time_between_sample, 0.1))), 1)
         motion_detector = MotionDetector(
             warmup_frames=warmup_frames,
@@ -219,8 +197,7 @@ def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
             capture_fps = default_fps
         fphs = max(int(capture_fps) // 2, 1)  # frames per half a second
         pre_frame = frame
-        while not STOP_SIGNAL.exists():
-            ensure_capture_open(cap, source)
+        while cap.isOpened():
             base_name = f'database/{now().strftime(dt_str_f)}_{source}_'
             pre_frame, (captured, frame) = frame, cap.read()
             if not captured:
@@ -228,7 +205,6 @@ def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
                     'failed to read frame from source %r, retrying',
                     source,
                 )
-                time.sleep(frame_read_retry_delay_sec)
                 continue
             if not present_frame(frame, show):
                 logger.info('preset window closed, ending loop')
@@ -250,9 +226,7 @@ def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
                 marked_frame = frame.copy()
                 color_rectangle(marked_frame, detection.contours)
                 extensive_write(file, marked_frame, amount_to_write=fphs)
-                while ((now() - rec_start_time).seconds < min_rec_time
-                       and not STOP_SIGNAL.exists()):
-                    ensure_capture_open(cap, source)
+                while (now() - rec_start_time).seconds < min_rec_time:
                     pre_frame, (captured, frame) = frame, cap.read()
                     if not captured:
                         logger.warning(
@@ -260,7 +234,6 @@ def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
                             'retrying',
                             source,
                         )
-                        time.sleep(frame_read_retry_delay_sec)
                         continue
                     present_frame(frame, show)
                     keep_alive_detection = motion_detector.detect(frame)
