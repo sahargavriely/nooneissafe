@@ -21,7 +21,7 @@ from .utils import (
 dt_str_f = '%Y/%m/%d/%H-%M-%S'
 video_suffix = 'video.mp4'
 image_suffix = 'frame.jpg'
-sizes = [(1280, 720), (640, 480)]
+sizes = [(1280, 720), (640, 480)]  # (1920, 1080) is too big
 default_fps = 20.0
 video_codecs = ('avc1', 'H264', 'mp4v')
 video_normalize_timeout_sec = 180
@@ -274,7 +274,7 @@ def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
         capture_fps = cap_status.cap.get(cv.CAP_PROP_FPS)
         if not math.isfinite(capture_fps) or capture_fps <= 0:
             capture_fps = default_fps
-        fphs = max(int(capture_fps) // 2, 1)
+        fphs = max(int(capture_fps) // 2, 1)  # frames per half a second
         pre_frame = frame
         while cap_status():
             base_name = f'database/{now().strftime(dt_str_f)}_{source}_'
