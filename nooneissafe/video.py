@@ -28,7 +28,39 @@ video_normalize_timeout_sec = 180
 frame_read_retry_delay_sec = 1.0
 frame_read_reopen_after_failures = 10
 capture_reopen_warmup_sec = 1.0
+STOP_SIGNAL = pathlib.Path('stop')
 logger = logging.getLogger(__name__)
+
+
+class CaptureStatus:
+    """Callable loop guard: honor shutdown, reopen capture when it closes."""
+
+    def __init__(self, capture_state, source):
+        self._capture = capture_state
+        self.source = source
+        self._user_stop = False
+
+    @property
+    def cap(self):
+        return self._capture['cap']
+
+    @cap.setter
+    def cap(self, value):
+        self._capture['cap'] = value
+
+    def request_stop(self):
+        self._user_stop = True
+
+    def should_stop(self):
+        return self._user_stop or STOP_SIGNAL.exists()
+
+    def __call__(self):
+        if self.should_stop():
+            return False
+        if not self.cap.isOpened():
+            logger.warning('capture source %r is not open, reopening', self.source)
+            self.cap = reopen_capture(self.cap, self.source)
+        return True
 
 
 def _try_set_capture_resolution(cap, source):
@@ -62,9 +94,11 @@ def reopen_capture(cap, source):
     return cap
 
 
-def read_frame_with_retry(cap, source):
+def read_frame_with_retry(cap, source, should_stop=None):
     consecutive_failures = 0
     while True:
+        if should_stop and should_stop():
+            return cap, None
         if not cap.isOpened():
             logger.warning('capture source %r is not open, reopening', source)
             cap = reopen_capture(cap, source)
@@ -86,16 +120,16 @@ def read_frame_with_retry(cap, source):
 
 @contextlib.contextmanager
 def capture_video(source):
-    cap = open_capture(source)
-    cap.read()
+    capture_state = {'cap': open_capture(source)}
+    capture_state['cap'].read()
     logger.info('establish clear frame source %r', source)
     time.sleep(3)
     logger.info('camera rolling source %r', source)
     logger.info('action source %r', source)
     with contextlib.suppress(KeyboardInterrupt):
-        yield cap
+        yield capture_state
     logger.info('cut source %r', source)
-    cap.release()
+    capture_state['cap'].release()
     cv.destroyAllWindows()
 
 
@@ -226,23 +260,33 @@ def send_notification_wrapper(base_name):
 
 
 def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
-    with capture_video(source) as cap:
-        cap, frame = read_frame_with_retry(cap, source)
+    with capture_video(source) as capture_state:
+        cap_status = CaptureStatus(capture_state, source)
+        cap, frame = read_frame_with_retry(
+            cap_status.cap, source, cap_status.should_stop)
+        cap_status.cap = cap
+        if frame is None:
+            return
         warmup_frames = max(int(round(3 / max(time_between_sample, 0.1))), 1)
         motion_detector = MotionDetector(
             warmup_frames=warmup_frames,
         )
         motion_detector.detect(frame)
-        capture_fps = cap.get(cv.CAP_PROP_FPS)
+        capture_fps = cap_status.cap.get(cv.CAP_PROP_FPS)
         if not math.isfinite(capture_fps) or capture_fps <= 0:
             capture_fps = default_fps
         fphs = max(int(capture_fps) // 2, 1)  # frames per half a second
         pre_frame = frame
-        while True:
+        while cap_status():
             base_name = f'database/{now().strftime(dt_str_f)}_{source}_'
             pre_frame = frame
-            cap, frame = read_frame_with_retry(cap, source)
+            cap, frame = read_frame_with_retry(
+                cap_status.cap, source, cap_status.should_stop)
+            cap_status.cap = cap
+            if frame is None:
+                break
             if not present_frame(frame, show):
+                cap_status.request_stop()
                 logger.info('preset window closed, ending loop')
                 break
             detection = motion_detector.detect(frame)
@@ -257,14 +301,21 @@ def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
                 detection.motion_pixels,
             )
             save_frame(base_name, frame)
-            with open_video_file(cap, base_name, frame) as file:
+            with open_video_file(cap_status.cap, base_name, frame) as file:
                 extensive_write(file, pre_frame, amount_to_write=fphs)
                 marked_frame = frame.copy()
                 color_rectangle(marked_frame, detection.contours)
                 extensive_write(file, marked_frame, amount_to_write=fphs)
-                while (now() - rec_start_time).seconds < min_rec_time:
-                    cap, frame = read_frame_with_retry(cap, source)
-                    present_frame(frame, show)
+                while ((now() - rec_start_time).seconds < min_rec_time
+                       and cap_status()):
+                    cap, frame = read_frame_with_retry(
+                        cap_status.cap, source, cap_status.should_stop)
+                    cap_status.cap = cap
+                    if frame is None:
+                        break
+                    if not present_frame(frame, show):
+                        cap_status.request_stop()
+                        break
                     keep_alive_detection = motion_detector.detect(frame)
                     if keep_alive_detection.has_motion:
                         rec_start_time = now()
@@ -276,5 +327,7 @@ def record_loop(source, show=False, min_rec_time=10, time_between_sample=1):
                         file.write(marked_frame)
                         continue
                     file.write(frame)
+            if cap_status.should_stop():
+                break
             threading.Thread(target=send_notification_wrapper,
                              args=(base_name,)).start()
